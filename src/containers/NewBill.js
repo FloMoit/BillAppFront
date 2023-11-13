@@ -53,6 +53,7 @@ export default class NewBill {
       e.target.setCustomValidity(
         "Veuillez sélectionner un fichier d'image valide : jpg, jpeg ou png"
       );
+      e.currentTarget.reportValidity();
     } else {
       e.target.setCustomValidity("");
     }
