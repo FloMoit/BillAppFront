@@ -4,7 +4,7 @@
 
 import { screen, fireEvent, waitFor } from "@testing-library/dom";
 import { localStorageMock } from "../__mocks__/localStorage.js";
-import storeMock from "../__mocks__/store.js";
+import mockStore from "../__mocks__/store.js";
 import NewBillUI from "../views/NewBillUI.js";
 import NewBill from "../containers/NewBill.js";
 import { ROUTES_PATH, ROUTES } from "../constants/routes.js";
@@ -44,7 +44,7 @@ describe("Given I am connected as an employee on NewBill Page", () => {
     const newBill = new NewBill({
       document,
       onNavigate,
-      store: storeMock,
+      store: mockStore,
       localStorage: window.localStorage,
     });
 
@@ -66,7 +66,7 @@ describe("Given I am connected as an employee on NewBill Page", () => {
     const newBill = new NewBill({
       document,
       onNavigate,
-      store: storeMock,
+      store: mockStore,
       localStorage: window.localStorage,
     });
     const handleSubmit = jest.fn(newBill.handleSubmit);
@@ -151,7 +151,7 @@ describe("Given I am connected as an employee on NewBill Page", () => {
     const localStorageparse = JSON.parse(getlocalStorage);
     const email = JSON.parse(localStorageparse).email;
 
-    const mocked = storeMock.bills();
+    const mocked = mockStore.bills();
     const createBills = jest.spyOn(mocked, "create");
 
     const create = await createBills({ email, ...inputData });
@@ -170,5 +170,53 @@ describe("Given I am connected as an employee on NewBill Page", () => {
     expect(handleSubmit).toHaveBeenCalled();
     expect(createBills).toHaveBeenCalled();
     expect(formNewBill).toBeTruthy();
+  });
+
+  describe("Testing API", () => {
+    beforeEach(() => {
+      jest.spyOn(mockStore, "bills");
+      Object.defineProperty(window, "localStorage", {
+        value: localStorageMock,
+      });
+      window.localStorage.setItem(
+        "user",
+        JSON.stringify({
+          type: "Admin",
+          email: "a@a",
+        })
+      );
+      const root = document.createElement("div");
+      root.setAttribute("id", "root");
+      document.body.appendChild(root);
+      router();
+    });
+    test("fetches bills from an API and fails with 404 message error", async () => {
+      mockStore.bills.mockImplementationOnce(() => {
+        return {
+          list: () => {
+            return Promise.reject(new Error("Erreur 404"));
+          },
+        };
+      });
+      window.onNavigate(ROUTES_PATH.Dashboard);
+      await new Promise(process.nextTick);
+      const message = await screen.getByText(/Erreur 404/);
+      expect(message).toBeTruthy();
+    });
+
+    test("fetches messages from an API and fails with 500 message error", async () => {
+      mockStore.bills.mockImplementationOnce(() => {
+        return {
+          list: () => {
+            return Promise.reject(new Error("Erreur 500"));
+          },
+        };
+      });
+
+      window.onNavigate(ROUTES_PATH.Dashboard);
+      await new Promise(process.nextTick);
+      const message = await screen.getByText(/Erreur 500/);
+      expect(message).toBeTruthy();
+    });
   });
 });
