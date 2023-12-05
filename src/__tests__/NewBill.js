@@ -185,38 +185,72 @@ describe("Given I am connected as an employee on NewBill Page", () => {
           email: "a@a",
         })
       );
-      const root = document.createElement("div");
-      root.setAttribute("id", "root");
-      document.body.appendChild(root);
-      router();
     });
+
     test("fetches bills from an API and fails with 404 message error", async () => {
+      let error;
+
       mockStore.bills.mockImplementationOnce(() => {
         return {
-          list: () => {
-            return Promise.reject(new Error("Erreur 404"));
+          create: () => {
+            error = new Error("Error 404");
+            return Promise.reject(error);
           },
         };
       });
-      window.onNavigate(ROUTES_PATH.Dashboard);
-      await new Promise(process.nextTick);
-      const message = await screen.getByText(/Erreur 404/);
-      expect(message).toBeTruthy();
+
+      //Pas besoin de catch l'erreur puisque la fonction testée le fait déjà
+      const html = NewBillUI();
+      document.body.innerHTML = html;
+
+      const newBills = new NewBill({
+        document,
+        onNavigate: () => {},
+        store: mockStore,
+        localStorage: window.localStorage,
+      });
+
+      const file = screen.getByTestId("file");
+      fireEvent.change(file, {
+        target: {
+          files: [new File(["image.png"], "image.png", { type: "image/png" })],
+        },
+      });
+
+      await waitFor(() => {
+        expect(error.message).toBe("Error 404");
+      });
     });
 
     test("fetches messages from an API and fails with 500 message error", async () => {
+      let error;
       mockStore.bills.mockImplementationOnce(() => {
         return {
-          list: () => {
-            return Promise.reject(new Error("Erreur 500"));
+          create: () => {
+            error = new Error("Error 500");
+            return Promise.reject(error);
           },
         };
       });
 
-      window.onNavigate(ROUTES_PATH.Dashboard);
-      await new Promise(process.nextTick);
-      const message = await screen.getByText(/Erreur 500/);
-      expect(message).toBeTruthy();
+      const html = NewBillUI();
+      document.body.innerHTML = html;
+
+      const newBills = new NewBill({
+        document,
+        onNavigate: () => {},
+        store: mockStore,
+        localStorage: window.localStorage,
+      });
+
+      const file = screen.getByTestId("file");
+      fireEvent.change(file, {
+        target: {
+          files: [new File(["image.png"], "image.png", { type: "image/png" })],
+        },
+      });
+
+      await waitFor(() => expect(error.message).toBe("Error 500"));
     });
   });
 });
